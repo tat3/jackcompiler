@@ -198,8 +198,8 @@ export class Parser extends CstParser {
           $.SUBRULE($.unaryOp)
           $.SUBRULE($.termExpression)
         }},
-        { ALT: () => $.CONSUME(Tokens.IntegerLiteral)},
-        { ALT: () => $.CONSUME(Tokens.StringLiteral)},
+        { ALT: () => $.SUBRULE($.integerConstant)},
+        { ALT: () => $.SUBRULE($.stringConstant)},
         { ALT: () => $.SUBRULE($.keywordConstant)},
         { ALT: () => {
           $.SUBRULE1($.varName)
@@ -274,6 +274,10 @@ export class Parser extends CstParser {
         { ALT: () => $.CONSUME(Tokens.This) },
       ])
     })
+
+    $.RULE('integerConstant', () => $.CONSUME(Tokens.IntegerLiteral))
+
+    $.RULE('stringConstant', () => $.CONSUME(Tokens.StringLiteral))
 
     this.performSelfAnalysis()
   }
