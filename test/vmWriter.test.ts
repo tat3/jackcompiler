@@ -40,7 +40,7 @@ describe('code writer test', () => {
   it('compile sample jack scripts to vm code', () => {
     const tests = [
       { dir: 'Average', files: ['Main']},
-      // { dir: 'ComplexArrays', files: ['Main']},
+      { dir: 'ComplexArrays', files: ['Main']},
       { dir: 'ConvertToBin', files: ['Main']},
       { dir: 'Pong', files: ['Main', 'Ball', 'PongGame']},
       { dir: 'Seven', files: ['Main']},

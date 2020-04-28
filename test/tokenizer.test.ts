@@ -31,4 +31,15 @@ describe('tokenizer test', () => {
       expect(tokenized.tokens).to.have.length(test.n)
     })
   })
+
+  it('tokenize identifier rather than keyword', () => {
+    const script = 'double'
+    const tokenized = t.tokenize(script)
+
+      tokenized.errors.forEach(console.log)
+      expect(tokenized.errors).to.have.length(0)
+      expect(tokenized.tokens).to.have.length(1)
+      expect(tokenized.tokens[0].image).not.to.equal('do')
+      expect(tokenized.tokens[0].image).to.equal('double')
+  })
 })
