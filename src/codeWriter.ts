@@ -1,7 +1,7 @@
 import { CstNode } from 'chevrotain'
 import { Parser } from './parser'
 import { SymbolTable, Symbol } from './symbolTable'
-import { range } from './util'
+import { range, last } from './util'
 const parser = new Parser()
 const BaseJackVisitor = parser.getBaseCstVisitorConstructorWithDefaults()
 
@@ -90,15 +90,31 @@ class JackVisitor extends BaseJackVisitor {
   }
 
   letStatement = (ctx: any) => {
-    this.visit(ctx.expression)
-    const name = this.visit(ctx.varName)
-    const attribute = this.table.getSymbolAttribute(name)
-    if (!attribute) {
-      throw new Error(`symbol ${name} is not declared`)
+    if (ctx.expression.length == 1) {
+      this.visit(last(ctx.expression))
+      const name = this.visit(ctx.varName)
+      const symbol = this.table.getSymbol(name)
+      if (!symbol) {
+        throw new Error(`symbol ${name} is not declared`)
+      }
+      const segment = attr2seg(symbol.attribute)
+      this.$p(`pop ${segment} ${symbol.index}`)
+    } else {
+      this.visit(ctx.expression)
+      const name = this.visit(ctx.varName)
+      const symbol = this.table.getSymbol(name)
+      if (!symbol) {
+        throw new Error(`symbol ${name} is not declared`)
+      }
+      const segment = attr2seg(symbol.attribute)
+      this.$p(`push ${segment} ${symbol.index}`)
+      this.$p(`add`)
+      this.visit(last(ctx.expression))
+      this.$p(`pop temp 0`)
+      this.$p(`pop pointer 1`)
+      this.$p(`push temp 0`)
+      this.$p(`pop that 0`)
     }
-    const segment = attr2seg(attribute)
-    const symbolId = this.table.getSymbolIndex(name)
-    this.$p(`pop ${segment} ${symbolId}`)
   }
 
   ifStatement = (ctx: any) => {
@@ -189,40 +205,51 @@ class JackVisitor extends BaseJackVisitor {
   }
 
   termExpression = (ctx: any) => {
-    const name = Object.keys(ctx)[0]
-    switch (name) {
-      case 'LRound':
-        this.visit(ctx.expression)
-        break
-      case 'keywordConstant':
-        this.visit(ctx[name])
-        break
-      case 'integerConstant':
-        this.visit(ctx[name])
-        break
-      case 'stringConstant':
-        this.visit(ctx[name])
-        break
-      case 'subroutineCall':
-        this.visit(ctx[name])
-        break
-      case 'varName':
-        const vn = this.visit(ctx[name])
-        const attribute = this.table.getSymbolAttribute(vn)
-        if (!attribute) {
-          throw new Error(`symbol ${vn} is not declared`)
-        }
-        const index = this.table.getSymbolIndex(vn)
-        this.$p(`push ${attr2seg(attribute)} ${index}`)
-        break
-      case 'unaryOp':
-        this.visit(ctx.termExpression)
-        this.visit(ctx.unaryOp)
-        break
+    if (ctx.LRound) {
+      this.visit(ctx.expression)
 
-      default:
-        console.log(name)
-        throw new Error(`invalid term name ${name}`)
+    } else if (ctx.keywordConstant) {
+      this.visit(ctx.keywordConstant)      
+
+    } else if (ctx.integerConstant) {
+      this.visit(ctx.integerConstant)
+
+    } else if (ctx.stringConstant) {
+      this.visit(ctx.stringConstant)
+
+    } else if (ctx.subroutineCall) {
+      this.visit(ctx.subroutineCall)
+    
+    } else if (ctx.LSquare) {
+      this.visit(ctx.expression)
+      const name = this.visit(ctx.varName)
+      const symbol = this.table.getSymbol(name)
+      if (!symbol) {
+        throw new Error(`symbol ${name} is not declared`)
+      }
+      const segment = attr2seg(symbol.attribute)
+      this.$p(`push ${segment} ${symbol.index}`)
+      this.$p(`add`)
+      this.$p(`pop pointer 1`)
+      this.$p(`push that 0`)
+
+    } else if (ctx.varName) {
+      const name = this.visit(ctx.varName)
+      const symbol = this.table.getSymbol(name)
+      if (!symbol) {
+        throw new Error(`symbol ${name} is not declared`)
+      }
+      const segment = attr2seg(symbol.attribute)
+      this.$p(`push ${segment} ${symbol.index}`)
+
+    } else if (ctx.unaryOp) {
+      this.visit(ctx.termExpression)
+      this.visit(ctx.unaryOp)
+
+    } else {
+      const name = Object.keys(ctx)[0]
+      console.log(name)
+      throw new Error(`invalid term name ${name}`)
     }
   }
 
