@@ -39,4 +39,10 @@ export class SymbolTable {
   getSymbolIndex(name: string) {
     return this.table[name] ? this.table[name].index : null
   }
+
+  clone() {
+    const table = new SymbolTable()
+    table.table = JSON.parse(JSON.stringify(this.table))
+    return table
+  }
 }

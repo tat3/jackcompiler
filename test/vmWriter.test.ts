@@ -21,8 +21,8 @@ describe('code writer test', () => {
     const testDir = 'test/data/Square'
     const tests = [
       { file: 'Main' },
-      // { file: 'Square' },
-      // { file: 'SquareGame' },
+      { file: 'Square' },
+      { file: 'SquareGame' },
     ]
 
     tests.forEach(test => {
