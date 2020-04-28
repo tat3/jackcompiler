@@ -24,6 +24,10 @@ export class SymbolTable {
     this.table[name] = new Symbol(name, type, attribute, this.indexTable[attribute])
   }
 
+  incrementArgumentIndex() {
+    this.indexTable.argument++
+  }
+
   getSymbol(name: string) {
     return this.table[name] || null
   }

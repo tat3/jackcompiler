@@ -1,6 +1,7 @@
 import { CstNode } from 'chevrotain'
 import { Parser } from './parser'
 import { SymbolTable, Symbol } from './symbolTable'
+import { range } from './util'
 const parser = new Parser()
 const BaseJackVisitor = parser.getBaseCstVisitorConstructorWithDefaults()
 
@@ -55,7 +56,10 @@ class JackVisitor extends BaseJackVisitor {
   subroutineDec = (ctx: any) => {
     this.table = this.classVarTable.clone()
     this.ifIndex = 0
-    const nLocals = ctx.subroutineBody[0].children.varDec?.length || 0
+    this.whileIndex = 0
+    const nLocals = (ctx.subroutineBody[0].children.varDec || [])
+      .map((item: any) => item.children.varName.length)
+      .reduce((acc: number, item: number) => acc + item, 0)
     this.$p(`function ${this._className}.${this.visit(ctx.subroutineName)} ${nLocals}`)
     if (ctx.Constructor) {
       this.$p(`push constant ${this.nFields}`)
@@ -63,6 +67,7 @@ class JackVisitor extends BaseJackVisitor {
       this.$p(`pop pointer 0`)
     }
     if (ctx.Method) {
+      this.table.incrementArgumentIndex()
       this.$p(`push argument 0`)
       this.$p(`pop pointer 0`)
     }
@@ -97,20 +102,21 @@ class JackVisitor extends BaseJackVisitor {
   }
 
   ifStatement = (ctx: any) => {
+    const index = this.ifIndex
+    this.ifIndex++
     this.visit(ctx.expression)
-    this.$p(`if-goto IF_TRUE${this.ifIndex}`)
-    this.$p(`goto IF_FALSE${this.ifIndex}`)
-    this.$p(`label IF_TRUE${this.ifIndex}`)
+    this.$p(`if-goto IF_TRUE${index}`)
+    this.$p(`goto IF_FALSE${index}`)
+    this.$p(`label IF_TRUE${index}`)
     this.visit(ctx.statements[0])
     if (ctx.Else) {
-      this.$p(`goto IF_END${this.ifIndex}`)
+      this.$p(`goto IF_END${index}`)
     }
-    this.$p(`label IF_FALSE${this.ifIndex}`)
+    this.$p(`label IF_FALSE${index}`)
     if (ctx.Else) {
       this.visit(ctx.statements[1])
-      this.$p(`label IF_END${this.ifIndex}`)
+      this.$p(`label IF_END${index}`)
     }
-    this.ifIndex++
   }
 
   whileStatement = (ctx: any) => {
@@ -194,6 +200,9 @@ class JackVisitor extends BaseJackVisitor {
       case 'integerConstant':
         this.visit(ctx[name])
         break
+      case 'stringConstant':
+        this.visit(ctx[name])
+        break
       case 'subroutineCall':
         this.visit(ctx[name])
         break
@@ -224,7 +233,6 @@ class JackVisitor extends BaseJackVisitor {
       const symbol = this.table.getSymbol(idName(ctx))
       const symbolType = symbol?.type
       const index = symbol?.index
-      const attribute = symbol?.attribute
       if (symbol) {
 
         const segment = attr2seg(symbol.attribute)
@@ -249,6 +257,8 @@ class JackVisitor extends BaseJackVisitor {
   op = (ctx: any) => {
     const cmd = ctx.Plus ? 'add'
       : ctx.Minus ? 'sub'
+      : ctx.Asterisk ? 'call Math.multiply 2'
+      : ctx.Slash ? 'call Math.divide 2'
       : ctx.LT ? 'lt'
       : ctx.GT ? 'gt'
       : ctx.Equal ? 'eq'
@@ -290,7 +300,15 @@ class JackVisitor extends BaseJackVisitor {
     const name = ctx.IntegerLiteral[0].image
     this.$p(`push constant ${name}`)
   }
-  stringConstant = (ctx: any) => ctx.IntegerLiteral[0].image
+  stringConstant = (ctx: any) => {
+    const string = ctx.StringLiteral[0].image.slice(1, -1) as string
+    this.$p(`push constant ${string.length}`)
+    this.$p(`call String.new 1`)
+    range(string.length).forEach(i => {
+      this.$p(`push constant ${string.charCodeAt(i)}`)
+      this.$p(`call String.appendChar 2`)
+    })
+  }
 }
 
 export class CodeWriter {
